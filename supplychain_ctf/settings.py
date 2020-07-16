@@ -19,14 +19,20 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangsupplychain_ctfoproject.com/en/3.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '!+4!e7-!6&ul^m((#^)gm*^9u5r=y6*i6n4_c72h6pvz^ce)+!'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get("SECRET_KEY", None)
 
+# default the secret key during debug if it is set. Just makes development easier
+if SECRET_KEY is None:
+    if DEBUG:
+        SECRET_KEY = '!+4!e7-!6&ul^m((#^)gm*^9u5r=y6*i6n4_c72h6pvz^ce)+!'
+    else:
+        raise RuntimeError("SECRET_KEY not defined in environment and running with DEBUG=False. This is not secure")
+
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -120,3 +126,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+]
