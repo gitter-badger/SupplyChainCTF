@@ -1,121 +1,88 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
-  <title>Starter Template - Materialize</title>
-
-  <!-- CSS  -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="{% static "game/css/materialize.css" %}" type="text/css" rel="stylesheet" media="screen,projection"/>
-  <link href="{% static "game/css/style.css" %}" type="text/css" rel="stylesheet" media="screen,projection"/>
-</head>
-<body>
-  <nav class="light-blue lighten-1" role="navigation">
-    <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo">Logo</a>
-      <ul class="right hide-on-med-and-down">
-        <li><a href="#">Navbar Link</a></li>
-      </ul>
-
-      <ul id="nav-mobile" class="sidenav">
-        <li><a href="#">Navbar Link</a></li>
-      </ul>
-      <a href="#" data-target="nav-mobile" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-    </div>
-  </nav>
-  <div class="section no-pad-bot" id="index-banner">
-    <div class="container">
-      <br><br>
-      <h1 class="header center orange-text">Starter Template</h1>
-      <div class="row center">
-        <h5 class="header col s12 light">A modern responsive front-end framework based on Material Design</h5>
-      </div>
-      <div class="row center">
-        <a href="http://materializecss.com/getting-started.html" id="download-button" class="btn-large waves-effect waves-light orange">Get Started</a>
-      </div>
-      <br><br>
+{% extends "game/parent.html" %}
+{% load mathfilters %}
+{% block content %}
+    <div class="row" style="margin-top: 10px; border: 1px solid black">
+        <div class="col s1"></div>
+        <div class="col s4"><h4>Score: {{ game_state.score }}</h4> </div>
+        <div class="col s4"><h4>Days left: {{ game_state.days_left }}</h4> </div>
+        <div class="col s1">
+        </div>
+        <div class="col s2" style="padding-top: 10px">
+            <a class="waves-effect waves-light btn-large" >
+                <i class="material-icons right">watch_later</i>Next Turn
+            </a>
+        </div>
 
     </div>
-  </div>
+   <div class="row">
+      <div class="col s3" style="border: 1px solid black">Events</div>
+       <div class="col s9" style="border: 1px solid black">
+           <h4 style="text-align: center">Systems</h4>
+           <br/>
+           {% for systemstate in game_state.systemstate_set.all %}
+                 <div class="card">
 
+                    <div class="card-content">
+                        <span class="card-title activator grey-text text-darken-4">
+                            <!-- system status -->
+                            {% if systemstate.procured %}
+                                {% if systemstate.downtime > 0 %}
+                                    <span class="new badge red" data-badge-caption=" turns downtime">{{ systemstate.downtime }}</span>
+                                {% endif %}
+                            {% endif %}
+                            <!-- /system status -->
+                            {{ systemstate.system.name }}
+                            <span style="float:right" >
+                                +{{ systemstate.system.score_per_day }} / turn
+                            </span>
+                        </span>
 
-  <div class="container">
-    <div class="section">
+                      <p>{{ systemstate.system.description }}</p>
+                    </div>
+                    <div class="card-tabs">
+                      <ul class="tabs tabs-fixed-width">
+                          {% for vendor in systemstate.system.vendors.all %}
+                              <li class="tab  {% if systemstate.procured and systemstate.chosen_vendor != vendor%}disabled{% endif %}">
+                                  <a {% if systemstate.procured and systemstate.chosen_vendor == vendor%}
+                                      class="active"
 
-      <!--   Icon Section   -->
-      <div class="row">
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center light-blue-text"><i class="material-icons">flash_on</i></h2>
-            <h5 class="center">Speeds up development</h5>
+                                  {% endif %}
+                                      href="#{{ systemstate.pk }}vendor{{ vendor.pk }}">{{ vendor.name }}</a>
+                              </li>
+                          {% endfor %}
+                      </ul>
+                    </div>
+                    <div class="card-content grey lighten-4">
+                        {% for vendor in systemstate.system.vendors.all %}
+                            <div id="{{ systemstate.pk }}vendor{{ vendor.pk }}">
+                            {% if not systemstate.procured %}
+                            <a class="btn-floating halfway-fab waves-effect waves-light green"
+                                        href="{% url 'procure_systemstate' systemstate_id=systemstate.pk vendor_id=vendor.pk %}"
+                            >
+                                <i class="material-icons">attach_money</i>
+                            </a>
+                            {% endif %}
+                                {{ vendor.description }}
 
-            <p class="light">We did most of the heavy lifting for you to provide a default stylings that incorporate our custom components. Additionally, we refined animations and transitions to provide a smoother experience for developers.</p>
-          </div>
-        </div>
-
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center light-blue-text"><i class="material-icons">group</i></h2>
-            <h5 class="center">User Experience Focused</h5>
-
-            <p class="light">By utilizing elements and principles of Material Design, we were able to create a framework that incorporates components and animations that provide more feedback to users. Additionally, a single underlying responsive system across all platforms allow for a more unified user experience.</p>
-          </div>
-        </div>
-
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center light-blue-text"><i class="material-icons">settings</i></h2>
-            <h5 class="center">Easy to work with</h5>
-
-            <p class="light">We have provided detailed documentation as well as specific code examples to help new users get started. We are also always open to feedback and can answer any questions a user may have about Materialize.</p>
-          </div>
-        </div>
-      </div>
-
-    </div>
-    <br><br>
-  </div>
-
-  <footer class="page-footer orange">
-    <div class="container">
-      <div class="row">
-        <div class="col l6 s12">
-          <h5 class="white-text">Company Bio</h5>
-          <p class="grey-text text-lighten-4">We are a team of college students working on this project like it's our full time job. Any amount would help support and continue development on this project and is greatly appreciated.</p>
-
-
-        </div>
-        <div class="col l3 s12">
-          <h5 class="white-text">Settings</h5>
-          <ul>
-            <li><a class="white-text" href="#!">Link 1</a></li>
-            <li><a class="white-text" href="#!">Link 2</a></li>
-            <li><a class="white-text" href="#!">Link 3</a></li>
-            <li><a class="white-text" href="#!">Link 4</a></li>
-          </ul>
-        </div>
-        <div class="col l3 s12">
-          <h5 class="white-text">Connect</h5>
-          <ul>
-            <li><a class="white-text" href="#!">Link 1</a></li>
-            <li><a class="white-text" href="#!">Link 2</a></li>
-            <li><a class="white-text" href="#!">Link 3</a></li>
-            <li><a class="white-text" href="#!">Link 4</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <div class="footer-copyright">
-      
-    </div>
-  </footer>
-
-
-  <!--  Scripts-->
-  <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-  <script src="{% static "game/js/materialize.js" %}"></script>
-  <script src="{% static "game/js/init.js" %}"></script>
-
-  </body>
-</html>
+                            <div style="margin-top: 2px">
+                              {% for tag in vendor.tags.all %}
+                                  {% if tag.visible %}
+                                      <div class="chip">
+                                         {{ tag.tag_name }}
+                                      </div>
+                                  {% endif %}
+                              {% endfor %}
+                            </div>
+                            <div style="position: absolute; right:100px; bottom: 0px;">
+                                Downtime: {{vendor.downtime_cost_multiplier|mul:systemstate.system.downtime_cost}} turns <br />
+                                Cost: {{vendor.setup_cost_multiplier|mul:systemstate.system.setup_cost}} score <br/>
+                            </div>
+                            <div></div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                  </div>
+           {% endfor %}
+       </div>
+   </div>
+{% endblock %}

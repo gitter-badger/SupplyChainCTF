@@ -26,6 +26,7 @@ def create_player(sender, instance, created, **kwargs):
 # META INFORMATION
 class Game(models.Model):
     name = models.CharField(max_length=64)
+    description = models.TextField(default="")
     total_days = models.IntegerField(default=1, help_text="The total number of days that the game takes place")
     systems = models.ManyToManyField("System")
 
@@ -37,7 +38,8 @@ class Game(models.Model):
         """
 
         # create the game state for this instance of the game
-        game_state = GameState(game=self, player=user, days_left=self.total_days)
+        player_info = PlayerInfo.objects.get(user=user)
+        game_state = GameState(game=self, player=player_info, days_left=self.total_days)
         game_state.save()
 
         # create the system state for every system in the game state
@@ -46,6 +48,8 @@ class Game(models.Model):
             system_states.append(SystemState(system=system, game_state=game_state))
 
         SystemState.objects.bulk_create(system_states)
+
+        return game_state
 
     def __str__(self):
         return self.name
@@ -58,13 +62,23 @@ class Tag(models.Model):
     tag_name = models.CharField(max_length=MAX_TAG_LENGTH, primary_key=True)
     visible = models.BooleanField(default=True, help_text="Should the user be able to see this tag?")
 
+    def __str__(self):
+        return self.tag_name
+
 
 class Vendor(models.Model):
     """
     A Vendor for a system
     """
     name = models.CharField(max_length=64)
-    tags = models.ManyToManyField(Tag)
+    description = models.TextField(default="")
+    tags = models.ManyToManyField(Tag, blank=True)
+
+    setup_cost_multiplier = models.FloatField(default=1.0)
+    downtime_cost_multiplier = models.FloatField(default=1.0)
+
+    def __str__(self):
+        return self.name
 
 
 class System(models.Model):
@@ -72,9 +86,13 @@ class System(models.Model):
     A type of system
     """
     name = models.CharField(max_length=64)
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
+    description = models.TextField(default="")
+    vendors = models.ManyToManyField(Vendor)
     score_per_day = models.IntegerField(default=0, help_text="Amount of score this will generate per day if active")
-    tags = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField(Tag, blank=True)
+
+    setup_cost = models.IntegerField(default=0, help_text="Cost in score it takes to set this baby up")
+    downtime_cost = models.IntegerField(default=0, help_text="Downtime to set up ")
 
     def __str__(self):
         return self.name
@@ -114,8 +132,10 @@ class Mitigation(models.Model):
     mitigation_name = models.CharField(max_length=20)
     system = models.ForeignKey(System, on_delete=models.CASCADE)
 
-    adds_tags = models.ManyToManyField(Tag, help_text="The mitigation adds the following tags")
-    removes_tags = models.ManyToManyField(Tag, help_text="The mitigation removes the following tags")
+    adds_tags = models.ManyToManyField(Tag, help_text="The mitigation adds the following tags",
+                                       related_name="added_by_mitigations")
+    removes_tags = models.ManyToManyField(Tag, help_text="The mitigation removes the following tags",
+                                          related_name="removed_by_mitigations")
 
     cost = models.IntegerField(default=1, help_text="The cost to apply this mitigation")
     downtime_days = models.IntegerField(default=1, help_text="The amount of downtime to apply")
@@ -176,6 +196,14 @@ class GameState(models.Model):
                     self.score += event.score
                     ps.save()
 
+        # add score for systems that are operational
+        for systemstate in procured_systems:
+            if systemstate.downtime <= 0:
+                self.score += systemstate.sytem.score_per_day
+            else:
+                systemstate.downtime -= 1
+                systemstate.save()
+
         self.save()
         return events
 
@@ -189,14 +217,15 @@ class SystemState(models.Model):
     """
     game_state = models.ForeignKey(GameState, on_delete=models.CASCADE)
     system = models.ForeignKey(System, on_delete=models.CASCADE)
+    chosen_vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, null=True, blank=True)
     procured = models.BooleanField(default=False)
     downtime = models.IntegerField(default=0, help_text="How many days of downtime left? if this value is <= 0 " +
                                                         "it means the system is operational")
 
-    active_tags = models.ManyToManyField(Tag)
+    active_tags = models.ManyToManyField(Tag, blank=True)
 
     def __str__(self):
-        return self.pk + str(self.game_state) + str(self.system)
+        return f"{self.game_state} {self.system}"
 
 
 class MitigationApplied(models.Model):
