@@ -8,15 +8,24 @@
         <div class="col s1">
         </div>
         <div class="col s2" style="padding-top: 10px">
-            <a class="waves-effect waves-light btn-large" >
+            <a class="waves-effect waves-light btn-large"
+                href="{% url 'next_turn_vew' game_state_id=game_state.pk %}"
+            >
                 <i class="material-icons right">watch_later</i>Next Turn
             </a>
         </div>
 
     </div>
-   <div class="row">
-      <div class="col s3" style="border: 1px solid black">Events</div>
-       <div class="col s9" style="border: 1px solid black">
+   <div class="row" style="border: 1px solid black">
+      <div class="col s3" >
+          <h4 style="text-align: center">NEWS</h4>
+      <ul class="collection" style="max-height: 1500px; overflow-y: scroll">
+          {% for event in events %}
+              <li class="collection-item">{{ event.description }}</li>
+          {% endfor %}
+      </ul>
+      </div>
+       <div class="col s9" style="border-left: 1px solid black">
            <h4 style="text-align: center">Systems</h4>
            <br/>
            {% for systemstate in game_state.systemstate_set.all %}
@@ -28,6 +37,8 @@
                             {% if systemstate.procured %}
                                 {% if systemstate.downtime > 0 %}
                                     <span class="new badge red" data-badge-caption=" turns downtime">{{ systemstate.downtime }}</span>
+                                    {% else %}
+                                     <span class="new badge green" data-badge-caption="active"></span>
                                 {% endif %}
                             {% endif %}
                             <!-- /system status -->

@@ -39,7 +39,7 @@ class Game(models.Model):
 
         # create the game state for this instance of the game
         player_info = PlayerInfo.objects.get(user=user)
-        game_state = GameState(game=self, player=player_info, days_left=self.total_days)
+        game_state = GameState(game=self, player=player_info, days_left=self.total_days, started=True)
         game_state.save()
 
         # create the system state for every system in the game state
@@ -112,6 +112,7 @@ class Event(models.Model):
     An event happens during the game. Could be good, or bad
     """
     name = models.CharField(max_length=64)
+    description = models.TextField(default="", help_text="The 'news alert' that will show when this event happens")
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
     tags = models.ManyToManyField(Tag)
     at_day = models.IntegerField(help_text="happens at this many days left")
@@ -165,13 +166,14 @@ class GameState(models.Model):
         returns a querset of events that occured today
         :return:
         """
-
+        print(self.started)
         # if we haven't started yet, then start the game and eject
         if not self.started:
             self.started = True
             return
 
         # Are we finished with the game ?
+        print(self.days_left)
         if self.days_left <= 0:
             self.finished = True
             return
@@ -182,15 +184,17 @@ class GameState(models.Model):
 
         # Any events on this day?
         events = Event.objects.filter(game=self.game, at_day=self.days_left)
-        procured_systems = self.systemstate_set.filter(procured=True).select_related("active_tags")
+        procured_systems = self.systemstate_set.filter(procured=True)
 
         # process the events
         for event in events:
             event_tags = set(event.tags.all())
+            print(event_tags)
             # find any procured systems with the tags that trigger this event
             # TODO This could definitely be optimized into a single query
             for ps in procured_systems:
                 # if there is ANY intersectionality in these sets, then do the event effects
+                print(set(ps.active_tags.all()))
                 if len(set(ps.active_tags.all()).intersection(event_tags)) > 0:
                     ps.downtime += event.downtime
                     self.score += event.score
@@ -199,12 +203,11 @@ class GameState(models.Model):
         # add score for systems that are operational
         for systemstate in procured_systems:
             if systemstate.downtime <= 0:
-                self.score += systemstate.sytem.score_per_day
+                self.score += systemstate.system.score_per_day
             else:
                 systemstate.downtime -= 1
                 systemstate.save()
 
-        self.save()
         return events
 
     def __str__(self):
