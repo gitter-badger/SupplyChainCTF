@@ -106,6 +106,8 @@ class SystemDependency(models.Model):
     child_tag = models.ForeignKey(Tag, on_delete=models.CASCADE,
                                   help_text="In order to purchase this system you must have this tag")
 
+    def __str__(self):
+        return f"[{self.system}] requires [{self.child_tag}]"
 
 class Event(models.Model):
     """
@@ -159,6 +161,14 @@ class GameState(models.Model):
     score = models.IntegerField(default=0, help_text="The score for this game")
     started = models.BooleanField(default=False, help_text="Has the game started yet?")
     finished = models.BooleanField(default=False, help_text="Is the game finished?")
+
+    @property
+    def all_active_tags(self):
+        """
+        A set of all tags in this gamestate
+        :return:
+        """
+        return Tag.objects.filter(systemstate__in=self.systemstate_set.filter(procured=True))
 
     def game_tick(self):
         """
@@ -226,6 +236,33 @@ class SystemState(models.Model):
                                                         "it means the system is operational")
 
     active_tags = models.ManyToManyField(Tag, blank=True)
+
+    _cached_deps = None  # cache the deps since the template code will be calling it multiple times for speed
+
+    @property
+    def system_deps(self):
+        if self._cached_deps:
+            return self._cached_deps
+
+        # get all of the deps
+        deps = [x for x in self.system.systemdependency_set.all()]
+        # get a quick lookup of all tags from active procured systems
+        procured_systems = self.game_state.systemstate_set.filter(procured=True, downtime__lte=0).prefetch_related("active_tags")
+        active_tags = set()
+        for system in procured_systems:
+            for tag in system.active_tags.all():
+                active_tags.add(tag.pk)
+
+        # add a .fulfilled property to them so the template can style it appropriately
+        for x in deps:
+            x.fulfilled = x.child_tag_id in active_tags
+        # cache it
+        self._cached_deps = deps
+        return self._cached_deps
+
+    @property
+    def all_deps_fulfilled(self):
+        return all(x.fulfilled for x in self.system_deps)
 
     def __str__(self):
         return f"{self.game_state} {self.system}"

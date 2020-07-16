@@ -1,5 +1,6 @@
 {% extends "game/parent.html" %}
 {% block content %}
+       <h3>Start New</h3>
 <table>
         <thead>
           <tr>
@@ -23,5 +24,41 @@
         {% endfor %}
 
         </tbody>
+</table>
+   <h3>Active Scenarios</h3>
+    <table>
+        <thead>
+          <tr>
+              <th>Game</th>
+              <th>Score</th>
+              <th>Turns Left</th>
+              <th></th>
+              <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for gs in gamestates %}
+          <tr>
+            <td>{{ gs.game.name }}</td>
+            <td>{{ gs.score }}</td>
+              <td>{{ gs.days_left }}</td>
+              <td></td>
+            <td>
+                {% if not gs.finished %}
+                <a class="waves-effect waves-light btn-large" href="{% url 'game_state_view' game_state_id=gs.pk %}">
+                    <i class="material-icons right">arrow_forward</i>continue
+                </a>
+                {% else %}
+                <a class="waves-effect waves-red btn-large red"  href="{% url 'game_state_view' game_state_id=gs.pk %}">
+                <i class="material-icons right">lock</i>Game Over
+            </a>
+                {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+
+        </tbody>
       </table>
+
 {% endblock %}

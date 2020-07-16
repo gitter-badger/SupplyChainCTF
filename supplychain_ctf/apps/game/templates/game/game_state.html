@@ -4,15 +4,23 @@
     <div class="row" style="margin-top: 10px; border: 1px solid black">
         <div class="col s1"></div>
         <div class="col s4"><h4>Score: {{ game_state.score }}</h4> </div>
-        <div class="col s4"><h4>Days left: {{ game_state.days_left }}</h4> </div>
+        <div class="col s4"><h4>Turns left: {{ game_state.days_left }}</h4> </div>
         <div class="col s1">
         </div>
         <div class="col s2" style="padding-top: 10px">
+            {% if not game_state.finished %}
             <a class="waves-effect waves-light btn-large"
                 href="{% url 'next_turn_vew' game_state_id=game_state.pk %}"
             >
                 <i class="material-icons right">watch_later</i>Next Turn
             </a>
+                {% else %}
+                 <a class="waves-effect waves-red btn-large red"
+
+            >
+                <i class="material-icons right">lock</i>Game Over
+            </a>
+            {% endif %}
         </div>
 
     </div>
@@ -21,7 +29,24 @@
           <h4 style="text-align: center">NEWS</h4>
       <ul class="collection" style="max-height: 1500px; overflow-y: scroll">
           {% for event in events %}
-              <li class="collection-item">{{ event.description }}</li>
+              <li class="collection-item">
+              {% for tag in event.tags.all %}
+                    <span class="new badge blue" data-badge-caption="{{ tag.pk }}"></span>
+              {% endfor %}
+              <h6>Turn {{ event.at_day }}</h6>
+                  <span>
+                  {{ event.description }}
+                  </span>
+              <div class="spacer" style="height: 5px"></div>
+              {% if event.effected %}
+              <span class="new badge {% if event.score > 0 %}green{% else %}red{% endif %}"
+                    data-badge-caption="{{ event.score }}">score</span>
+               <span class="new badge {% if event.downtime <= 0 %}green{% else %}red{% endif %}"
+                    data-badge-caption="{{ event.downtime }}">downtime</span>
+                {% endif %}
+              <div class="spacer" style="height: 15px"></div>
+              </li>
+
           {% endfor %}
       </ul>
       </div>
@@ -49,6 +74,14 @@
                         </span>
 
                       <p>{{ systemstate.system.description }}</p>
+
+                    {% for dep in systemstate.system_deps %}
+                        {% if not dep.fulfilled  %}
+                            <span class="new badge red" data-badge-caption="{{ dep.child_tag_id }}"></span>
+                                {% else %}
+                             <span class="new badge green" data-badge-caption="{{ dep.child_tag_id }}"></span>
+                                {% endif %}
+                    {% endfor %}
                     </div>
                     <div class="card-tabs">
                       <ul class="tabs tabs-fixed-width">
@@ -67,11 +100,22 @@
                         {% for vendor in systemstate.system.vendors.all %}
                             <div id="{{ systemstate.pk }}vendor{{ vendor.pk }}">
                             {% if not systemstate.procured %}
+                                {% if systemstate.all_deps_fulfilled %}
                             <a class="btn-floating halfway-fab waves-effect waves-light green"
                                         href="{% url 'procure_systemstate' systemstate_id=systemstate.pk vendor_id=vendor.pk %}"
                             >
+
                                 <i class="material-icons">attach_money</i>
+
                             </a>
+                                    {% else %}
+                            <a class="btn-floating halfway-fab waves-effect waves-light amber"
+                            >
+
+                                <i class="material-icons">disc_full</i>
+
+                            </a>
+                                    {% endif %}
                             {% endif %}
                                 {{ vendor.description }}
 

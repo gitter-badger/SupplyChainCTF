@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import list_games, home, start_game, game_state_view, procure_systemstate, next_turn_view
+from .views import list_games, start_game, game_state_view, procure_systemstate, next_turn_view
 
 urlpatterns = [
     path('list/', list_games),
