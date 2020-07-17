@@ -45,10 +45,23 @@ class Game(models.Model):
         # create the system state for every system in the game state
         system_states = []
         for system in self.systems.all():
-            system_states.append(SystemState(system=system, game_state=game_state))
+            system_state = SystemState(system=system, game_state=game_state, procured=system.already_procured,)
 
-        SystemState.objects.bulk_create(system_states)
+            if system.already_procured:
+                system_state.save()
+                vendors = system.vendors.all().prefetch_related("tags")
+                default_vendor = vendors[0]
+                # make the legacy vendor default if it's in there
+                for vendor in vendors:
+                    if 'legacy' in [x.pk for x in vendor.tags.all()]:
+                        default_vendor = vendor
+                # adjust the tags
+                tags = list(system.tags.all())
+                tags.extend(x for x in default_vendor.tags.all())
+                system_state.active_tags.set(tags)
+                system_state.chosen_vendor = default_vendor
 
+            system_state.save()
         return game_state
 
     def __str__(self):
@@ -90,6 +103,7 @@ class System(models.Model):
     vendors = models.ManyToManyField(Vendor)
     score_per_day = models.IntegerField(default=0, help_text="Amount of score this will generate per day if active")
     tags = models.ManyToManyField(Tag, blank=True)
+    already_procured = models.BooleanField(default=False)
 
     setup_cost = models.IntegerField(default=0, help_text="Cost in score it takes to set this baby up")
     downtime_cost = models.IntegerField(default=0, help_text="Downtime to set up ")
@@ -249,6 +263,7 @@ class SystemState(models.Model):
         # get a quick lookup of all tags from active procured systems
         procured_systems = self.game_state.systemstate_set.filter(procured=True, downtime__lte=0).prefetch_related("active_tags")
         active_tags = set()
+
         for system in procured_systems:
             for tag in system.active_tags.all():
                 active_tags.add(tag.pk)

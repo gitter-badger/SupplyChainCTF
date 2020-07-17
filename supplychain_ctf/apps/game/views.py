@@ -1,10 +1,15 @@
+from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Prefetch
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
 
 # Create your views here.
 from .models import Game, GameState, SystemState, Vendor, Event, PlayerInfo
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import UserCreationForm
+from django.shortcuts import render, redirect
 
 
 @login_required
@@ -87,7 +92,7 @@ def procure_systemstate(request, systemstate_id, vendor_id):
     # adjust the tags
     tags = list(systemstate.system.tags.all())
     tags.extend(x for x in vendor.tags.all())
-    print(tags)
+
     systemstate.active_tags.set(tags)
     # save it and return
     systemstate.save()
@@ -95,3 +100,16 @@ def procure_systemstate(request, systemstate_id, vendor_id):
 
     return redirect("game_state_view", game_state_id=systemstate.game_state.pk)
 
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            raw_password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=raw_password)
+            login(request, user)
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    return render(request, 'game/signup.html', {'form': form})

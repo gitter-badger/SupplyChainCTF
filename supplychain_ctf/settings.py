@@ -32,7 +32,11 @@ if SECRET_KEY is None:
     else:
         raise RuntimeError("SECRET_KEY not defined in environment and running with DEBUG=False. This is not secure")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "192.168.0.117"
+
+]
 
 # Application definition
 
